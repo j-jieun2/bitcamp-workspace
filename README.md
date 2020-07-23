@@ -45,3 +45,31 @@
     - com.eomcs.basic.ex02 패키지 예제
 - 자바 언어로 값을 표현하는 문법(literal)
     - com.eomcs.basic.ex03 패키지 예제
+
+
+### 7일차
+
+macOS 개발 환경 구축하기
+
+- macOS 개발 도구 설치하기
+- bash 쉘을 zsh 쉘로 변경하기
+- oh-my-zsh 플러그인 추가하기
+- 5일차 과제 풀이
+- 연습
+    - 자바 프로젝트(bitcamp-java-project) 만들기
+    - 자바 프로젝트 실행하기
+        - > gradle run
+    - 자바 프로젝트 빌드하기
+        - > gradle build
+    - Eclipse IDE로 프로젝트 가져오기
+
+
+### 8일차
+
+- Gradle로 자바 프로젝트 eclise 프로젝트로 설정하기
+    - > build.gradle 빌드 스크립트 파일에 eclipse 플러그인 추가
+- 이클립스 설정 파일 생성
+    - > gradle.ecpilse
+- Eclipse IDE로 프로젝트 가져오기
+    - bitcamp-java-project 임포트
+    - bitcamp-java-basic 임포트 
