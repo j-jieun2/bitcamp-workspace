@@ -1,7 +1,8 @@
 package com.eomcs.basic.test;
 
 public class Javaclass020 {
-  class Member {
+
+  static class Member {
     String name ;
     String id;
     String password;
@@ -13,6 +14,9 @@ public class Javaclass020 {
 
     member.name = "최하얀";
     member.age = 23;
+
+    System.out.println(member.name);
+    System.out.println(member.age);
 
   }
 }

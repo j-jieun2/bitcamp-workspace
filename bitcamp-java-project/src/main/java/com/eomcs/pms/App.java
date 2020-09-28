@@ -1,172 +1,254 @@
 package com.eomcs.pms;
 
-import java.sql.Date;
-import java.util.Scanner;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import com.eomcs.pms.domain.Board;
+import com.eomcs.pms.domain.Member;
+import com.eomcs.pms.domain.Project;
+import com.eomcs.pms.domain.Task;
+import com.eomcs.pms.handler.BoardAddCommand;
+import com.eomcs.pms.handler.BoardDeleteCommand;
+import com.eomcs.pms.handler.BoardDetailCommand;
+import com.eomcs.pms.handler.BoardListCommand;
+import com.eomcs.pms.handler.BoardUpdateCommand;
+import com.eomcs.pms.handler.Command;
+import com.eomcs.pms.handler.HelloCommand;
+import com.eomcs.pms.handler.MemberAddCommand;
+import com.eomcs.pms.handler.MemberDeleteCommand;
+import com.eomcs.pms.handler.MemberDetailCommand;
+import com.eomcs.pms.handler.MemberListCommand;
+import com.eomcs.pms.handler.MemberUpdateCommand;
+import com.eomcs.pms.handler.ProjectAddCommand;
+import com.eomcs.pms.handler.ProjectDeleteCommand;
+import com.eomcs.pms.handler.ProjectDetailCommand;
+import com.eomcs.pms.handler.ProjectListCommand;
+import com.eomcs.pms.handler.ProjectUpdateCommand;
+import com.eomcs.pms.handler.TaskAddCommand;
+import com.eomcs.pms.handler.TaskDeleteCommand;
+import com.eomcs.pms.handler.TaskDetailCommand;
+import com.eomcs.pms.handler.TaskListCommand;
+import com.eomcs.pms.handler.TaskUpdateCommand;
+import com.eomcs.util.CsvObject;
+import com.eomcs.util.Prompt;
+import com.google.gson.Gson;
 
-// 1) 명령 프롬프트를 출력한다
-// 2) 명령어를 입력 받아 출력한다
 public class App {
-  static Scanner keyInput = new Scanner(System.in);
-
-  // 회원
-  static final int LENGTH = 5;
-  static int[] no = new int[LENGTH];
-  static String[] name = new String[LENGTH];
-  static String[] email = new String[LENGTH];
-  static String[] password = new String[LENGTH];
-  static String[] photo = new String[LENGTH];
-  static String[] tel = new String[LENGTH];
-  static Date[] now = new Date[LENGTH];
-  static long currentMillis = 0;
-  static int count = 0;
-
-  // 프로젝트
-  static final int PLENGTH = 100;
-  static int[] pno = new int[PLENGTH];
-  static String[] ptitle = new String[PLENGTH];
-  static String[] pcontent = new String[PLENGTH];
-  static Date[] pstartDate = new Date[PLENGTH];
-  static Date[] pendDate = new Date[PLENGTH];
-  static String[] powner = new String[PLENGTH];
-  static String[] pmembers = new String[PLENGTH];
-  static int pcount = 0;
-
-  // 작업
-  static final int TLENGTH = 100;
-  static int[] tno = new int[TLENGTH];
-  static String[] tcontent = new String[TLENGTH];
-  static Date[] tdeadline = new Date[TLENGTH];
-  static String[] towner = new String[TLENGTH];
-  static int[] tstatus = new int[TLENGTH];
-  static int tcount = 0;
 
   public static void main(String[] args) {
+    // 스태틱 멤버들이 공유하는 변수가 아니라면 로컬 변수로 만들라.
+    List<Board> boardList = new ArrayList<>();
+    File boardFile = new File("./board.json"); // 게시글을 저장할 파일 정보
 
+    List<Member> memberList = new LinkedList<>();
+    File memberFile = new File("./member.json"); // 회원을 저장할 파일 정보
 
+    List<Project> projectList = new LinkedList<>();
+    File projectFile = new File("./project.json"); // 프로젝트를 저장할 파일 정보
 
+    List<Task> taskList = new ArrayList<>();
+    File taskFile = new File("./task.json"); // 작업을 저장할 파일 정보
+
+    // 파일에서 데이터 로딩
+    // => loadObjects(Collection<T>, File, ObjectFactory<T>)
+    // => 첫 번째 파라미터: ObjectFactory.create()가 만든 객체를 보관하는 컬렉션이다.
+    // => 두 번째 파라미터: CSV 문자열이 저장된 파일 정보이다.
+    // => 세 번재 파라미터: CSV 문자열을 객체로 만들어주는 create() 메서드를 가진 ObjectFactory 구현체이다.
+    // ObjectFactory의 구현체는 따로 만들지 말고 생성자를 전달한다.
+    //
+    loadObjects(boardList, boardFile, Board[].class);
+    loadObjects(memberList, memberFile, Member[].class);
+    loadObjects(projectList, projectFile, Project[].class);
+    loadObjects(taskList, taskFile, Task[].class);
+
+    Map<String,Command> commandMap = new HashMap<>();
+
+    commandMap.put("/board/add", new BoardAddCommand(boardList));
+    commandMap.put("/board/list", new BoardListCommand(boardList));
+    commandMap.put("/board/detail", new BoardDetailCommand(boardList));
+    commandMap.put("/board/update", new BoardUpdateCommand(boardList));
+    commandMap.put("/board/delete", new BoardDeleteCommand(boardList));
+
+    MemberListCommand memberListCommand = new MemberListCommand(memberList);
+    commandMap.put("/member/add", new MemberAddCommand(memberList));
+    commandMap.put("/member/list", memberListCommand);
+    commandMap.put("/member/detail", new MemberDetailCommand(memberList));
+    commandMap.put("/member/update", new MemberUpdateCommand(memberList));
+    commandMap.put("/member/delete", new MemberDeleteCommand(memberList));
+
+    commandMap.put("/project/add", new ProjectAddCommand(projectList, memberListCommand));
+    commandMap.put("/project/list", new ProjectListCommand(projectList));
+    commandMap.put("/project/detail", new ProjectDetailCommand(projectList));
+    commandMap.put("/project/update", new ProjectUpdateCommand(projectList, memberListCommand));
+    commandMap.put("/project/delete", new ProjectDeleteCommand(projectList));
+
+    commandMap.put("/task/add", new TaskAddCommand(taskList, memberListCommand));
+    commandMap.put("/task/list", new TaskListCommand(taskList));
+    commandMap.put("/task/detail", new TaskDetailCommand(taskList));
+    commandMap.put("/task/update", new TaskUpdateCommand(taskList, memberListCommand));
+    commandMap.put("/task/delete", new TaskDeleteCommand(taskList));
+
+    commandMap.put("/hello", new HelloCommand());
+
+    Deque<String> commandStack = new ArrayDeque<>();
+    Queue<String> commandQueue = new LinkedList<>();
 
     loop:
       while (true) {
-        String command = promptString("명령> ");
+        String inputStr = Prompt.inputString("명령> ");
 
-        switch (command.toLowerCase()) {
-          case "/member/add":
-            addMember();
-            break;
-          case "/member/list":
-            listMember();
-            break;
-          case "/project/add":
-            addProject();
-            break;
-          case "/project/list":
-            listProject();
-            break;
-          case "/task/add":
-            addTask();
-            break;
-          case "/task/list":
-            listTask();
-            break;
-          case "exit":
+        if (inputStr.length() == 0) {
+          continue;
+        }
+
+        commandStack.push(inputStr);
+        commandQueue.offer(inputStr);
+
+        switch (inputStr) {
+          case "history": printCommandHistory(commandStack.iterator()); break;
+          case "history2": printCommandHistory(commandQueue.iterator()); break;
           case "quit":
+          case "exit":
             System.out.println("안녕!");
             break loop;
           default:
-            System.out.println("실행할 수 없는 명령입니다.");
+            Command command = commandMap.get(inputStr);
+            if (command != null) {
+              try {
+                // 실행 중 오류가 발생할 수 있는 코드는 try 블록 안에 둔다.
+                command.execute();
+              } catch (Exception e) {
+                // 오류가 발생하면 그 정보를 갖고 있는 객체의 클래스 이름을 출력한다.
+                System.out.println("--------------------------------------------------------------");
+                System.out.printf("명령어 실행 중 오류 발생: %s\n", e);
+                System.out.println("--------------------------------------------------------------");
+              }
+            } else {
+              System.out.println("실행할 수 없는 명령입니다.");
+            }
         }
-
         System.out.println();
-
       }
-  keyInput.close();
-  System.out.println("종료!");
+
+    Prompt.close();
+
+    // 데이터를 파일에 저장
+    saveObjects(boardList, boardFile);
+    saveObjects(memberList, memberFile);
+    saveObjects(projectList, projectFile);
+    saveObjects(taskList, taskFile);
   }
 
-  static void addMember() {
-    System.out.println("[회원 등록]");
+  static void printCommandHistory(Iterator<String> iterator) {
+    try {
+      int count = 0;
+      while (iterator.hasNext()) {
+        System.out.println(iterator.next());
+        count++;
 
-    no[count] = promptInt("번호? ");
-    name[count] = promptString("이름? ");
-    email[count] = promptString("이메일? ");
-    password[count] = promptString("암호? ");
-    photo[count] = promptString("사진? ");
-    tel[count] = promptString("전화? ");
-    now[count] = new Date(System.currentTimeMillis());
-
-    count++;
-  }
-
-  static void listMember() {
-    System.out.println("[회원 목록]");
-
-    for (int i = 0; i < count; i++) {
-      System.out.printf("%d, %s, %s, %s, %s\n",
-          no[i],
-          name[i],
-          email[i],
-          password[i],
-          photo[i],
-          tel[i],
-          now[i].toString());
-    }
-  }
-  static void addProject() {
-    System.out.println("[프로젝트 등록]");
-
-    pno[pcount] = promptInt("번호? ");
-    ptitle[pcount] = promptString("프로젝트명? ");
-    pcontent[pcount] = promptString("내용? ");
-    pstartDate[pcount] = promptDate("시작일? ");
-    pendDate[pcount] = promptDate("종료일? ");
-    powner[pcount] = promptString("만든이? ");
-    pmembers[pcount] = promptString("팀원? ");
-
-    pcount++;
-  }
-  static void listProject() {
-    System.out.println("[프로젝트 목록]");
-
-    for (int i = 0; i < pcount; i++) {
-      System.out.printf("%d, %s, %s, %s, %s\n",
-          pno[i],
-          ptitle[i],
-          pstartDate[i],
-          pendDate[i],
-          powner[i] );
-    }
-  }
-  static void addTask() {
-    System.out.println("[작업 등록]");
-
-    tno[tcount] = promptInt("번호? ");
-    tcontent[tcount] = promptString("내용? ");
-    tdeadline[tcount] = promptDate("마감일? ");
-    tstatus[tcount] = promptInt("상태?\n0: 신규\n1: 진행중\n2: 완료\n> ");
-    towner[tcount] = promptString("담당자? ");
-
-    tcount++;
-  }
-  static void listTask() {
-    for (int i = 0; i < tcount; i++) {
-      System.out.printf("%d, %s, %s, %s\n",
-          tno[i],
-          tcontent[i],
-          tdeadline[i],
-          towner[i]);
+        if ((count % 5) == 0 && Prompt.inputString(":").equalsIgnoreCase("q")) {
+          break;
+        }
+      }
+    } catch (Exception e) {
+      System.out.println("history 명령 처리 중 오류 발생!");
     }
   }
 
-  static String promptString(String title) {
-    System.out.print(title);
-    return keyInput.nextLine(); // title String 값을 리턴하여 출력
+  private static <T extends CsvObject> void saveObjects(Collection<T> list, File file) {
+    BufferedWriter out = null;
+
+    try {
+      out = new BufferedWriter(new FileWriter(file));
+
+      // JSON
+      Gson gson = new Gson();
+      String jsonStr = gson.toJson(list);
+      out.write(jsonStr);
+      out.flush();
+
+      System.out.printf("총 %d 개의 객체를 '%s' 파일에 저장했습니다.\n",
+          list.size(), file.getName());
+
+    } catch (IOException e) {
+      System.out.printf("객체를 '%s' 파일에  쓰는 중 오류 발생! - %s\n",
+          file.getName(), e.getMessage());
+
+    } finally {
+      try {
+        out.close();
+      } catch (IOException e) {
+      }
+    }
   }
 
-  static int promptInt(String title) {
-    return Integer.parseInt(promptString(title)); // String 문자열을 int 숫자로 변환 후 리턴 출력
-  }
+  // 파일에서 CSV 문자열을 읽어  객체를 생성한 후 컬렉션에 저장한다.
+  private static <T> void loadObjects(
+      Collection<T> list, // 객체를 담을 컬렉션
+      File file, // JSON 문자열이 저장된 파일
+      Class<T[]> clazz // JSON 문자열이 어떤 타입의 배열인지 알려주는 클래스 정보
+      ) {
+    BufferedReader in = null;
 
-  static Date promptDate(String title) {
-    return Date.valueOf(promptString(title)); // String 문자열을 Date 값으로 변환 후 리턴 출력
+    try {
+      in = new BufferedReader(new FileReader(file));
+
+      StringBuilder strBuilder = new StringBuilder();
+
+      int b = 0;
+      while ((b = in.read()) != -1) {
+        strBuilder.append((char) b);
+      }
+
+      // JSON 문자열을 가지고 자바 객체를 생성한다.
+      //      Gson gson = new Gson();
+      //      T[] arr = gson.fromJson(strBuilder.toString(), clazz);
+      //      for (T obj : arr) {
+      //        list.add(obj);
+      //      }
+
+      // 2) 입력 스트림을 직접 Gson에게 전달하기.
+      //      Gson gson = new Gson();
+      //      T[] arr = gson.fromJson(in, clazz);
+      //      for (T obj : arr) {
+      //        list.add(obj);
+      //      }
+
+      // 3) 배열을 컬렉션에 바로 전달하기
+      //      Gson gson = new Gson();
+      //      T[] arr = gson.fromJson(in, clazz);
+      //      list.addAll(Arrays.asList(arr));
+
+      // 4) 코드 정리
+            list.addAll(Arrays.asList(new Gson().fromJson(in, clazz)));
+
+
+      System.out.printf("'%s' 파일에서 총 %d 개의 객체를 로딩했습니다.\n",
+          file.getName(), list.size());
+
+    } catch (Exception e) {
+      System.out.printf("'%s' 파일 읽기 중 오류 발생! - %s\n",
+          file.getName(), e.getMessage());
+
+    } finally {
+      try {
+        in.close();
+      } catch (Exception e) {
+      }
+    }
   }
 }

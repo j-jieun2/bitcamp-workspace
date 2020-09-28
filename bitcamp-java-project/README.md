@@ -1,106 +1,104 @@
-# 06 - 메서드의 존재 이유
+# 31-d. 파일 입출력 API를 활용하여 데이터를 읽고 쓰기 II : 리팩터링 II
 
-**메서드** 는 *코드를 기능 단위로 묶을 때 사용*하는 문법이다. 
-코드를 기능 단위로 묶어 놓으면 관리하기도 쉽고 재사용하기도 쉽다.
+이번 훈련에서는,
+- **인터페이스** 를 활용하여 코드를 통합하는 것을 연습할 것이다.
+- **제네릭** 을 활용하여 범용 메서드를 만드는 방법을 연습할 것이다.
+- **메서드 레퍼런스** 를 활용하여 인터페이스를 구현하는 방법을 연습할 것이다.
+- **생성자 레퍼런스** 를 활용하여 인터페이스를 구현하는 방법을 연습할 것이다.
 
-메서드는 `static` 으로 선언하는 **클래스 메서드(또는 스태틱 메서드)**와
-`static` 이 붙지 않는(non-static) **인스턴스 메서드(또는 논스태틱 메서드)**로 나뉘어 진다.
+**인터페이스(interface)** 는,
+- 객체의 사용 규칙을 정의하는 문법이다.
+- 즉 객체에 대해 메서드 호출 규칙을 정의한다.
 
-이번 훈련에서는 코드를 기능 단위로 묶을 때 *클래스 메서드*로 선언할 것이다.  
+**인터페이스** 의 이점은,
+- 객체를 사용하는 측(client)의 코드 작성과 피사용측 코드 작성을 분리할 수 있다.
+- 즉 코드를 작성하는 개발자들이 서로 영향을 끼치지 않고 프로그래밍을 할 수 있다.  
+- 특정 클래스에 종속되지 않기 때문에 구현이 더 자유롭고 객체를 대체하기가 더 쉽다.
+
 
 ## 훈련 목표
-
-- 메서드를 활용하여 코드를 기능 단위로 묶는 방법을 배운다.
-- 메서드를 정의하고 사용하는 것을 연습한다.
-- 로컬 변수와 스태틱 필드의 사용 범위를 이해한다.
-- 리팩토링의 개념과 목적을 이해한다.
-- 리팩토링의 기법 중에서 '메서드 추출(Extract Method)'을 연습한다.
+- *인터페이스* 의 활용을 연습한다.
+- *제네릭* 을 메서드에 적용하는 것을 연습한다.
+- *메서드 레퍼런스* 를 이용하여 인터페이스 구현체를 파라미터로 전달하고 사용하는 방법을 연습한다.
+- *생성자 레퍼런스* 를 이용하여 인터페이스 구현체를 파라미터로 전달하고 사용하는 방법을 연습한다.
 
 ## 훈련 내용
+- CSV 문자열을 리턴하는 메서드를 인터페이스 규칙으로 정의한다.
+- 인터페이스를 활용하여 파일 출력 코드를 통합한다.
+- 파라미터 구현체로서 *메서드 레퍼런스* 또는 *생성자 레퍼런스* 를 전달한다.
+- 이를 이용하여 파일 입력 코드를 통합한다.
 
-- 회원 데이터를 입력하고 목록을 조회하는 코드를 메서드로 분리한다.
-- 프로젝트 데이터를 입력하고 목록을 조회하는 코드를 메서드로 분리한다.
-- 작업 데이터를 입력하고 목록을 조회하는 코드를 메서드로 분리한다.
 
 ## 실습
 
-### 1단계 - 회원 데이터를 입력하는 코드를 메서드로 분리한다
+### 1단계 - 객체에서 CSV 형식의 문자열 추출을 인터페이스를 이용하여 규칙으로 정의한다.
 
-- 회원 데이터의 입력을 처리하는 코드를 addMember() 메서드로 분리한다.
-- main()과 addMember()에서 Member 클래스와 배열을 사용할 수 있도록 스태틱 멤버로 선언한다.
-  
+CSV 문자열 추출을 규칙으로 정의해두면 규칙에 따라 일관성있게 객체를 다룰 수 있다.
+
+- com.eomcs.util.CsvObject 인터페이스 생성
+  - toCsvString() 메서드를 규칙으로 정의한다.
+
 #### 작업 파일
+- com.eomcs.util.CsvObject 생성
 
-- com.eomcs.pms.App 클래스 변경 
-  - 백업: App_a.java
 
-### 2단계 - 회원 데이터 목록을 출력하는 코드를 메서드로 분리한다
+### 2단계 - 도메인 클래스에 CsvObject 인터페이스를 적용한다.
 
-- 회원 데이터의 목록 출력을 처리하는 코드를 listMember() 메서드로 분리한다.
+- Board, Member, Project, Task 변경
+  - CsvObject 인터페이스의 구현체로 선언한다.
+
+#### 작업 파일
+- com.eomcs.pms.domain.Board 변경
+- com.eomcs.pms.domain.Member 변경
+- com.eomcs.pms.domain.Project 변경
+- com.eomcs.pms.domain.Task 변경
+
+### 3단계 - Board, Member, Project, Task 의 파일 저장 메서드를 통합한다.
  
-#### 작업 파일
-
-- com.eomcs.pms.App 클래스 변경
-  - 백업: App_b.java
-
-### 3단계 - 프로젝트 데이터를 입력하는 코드를 메서드로 분리한다
-
-- 프로젝트 데이터의 입력을 처리하는 코드를 addProject() 메서드로 분리한다.
-- main()과 addProject()에서 Project 클래스와 배열을 사용할 수 있도록 스태틱 멤버로 선언한다.
+- App 변경
+  - saveBoards(), saveMembers(), saveProjects(), saveTasks() 메서드를
+    saveObjects() 메서드로 통합한다.
 
 #### 작업 파일
+- com.eomcs.pms.App 변경
 
-- com.eomcs.pms.App 클래스 변경 
-    - 백업: App_c.java
+### 4단계 - CSV 형식의 문자열을 객체로 변환하는 것을 인터페이스를 이용해 규칙으로 정의한다.
 
-### 4단계 - 프로젝트 데이터 목록을 출력하는 코드를 메서드로 분리한다
+이렇게 규칙으로 정의해두면,
+CSV 문자열을 객체로 바꿀 때 일관성 있게 코딩할 수 있다.
 
-- 프로젝트 데이터의 목록 출력을 처리하는 코드를 listProject() 메서드로 분리한다.
-
-#### 작업 파일
-
-- com.eomcs.pms.App 클래스 변경
-  - 백업: App_d.java
-
-### 5단계 - 작업 데이터를 입력하는 코드를 메서드로 분리한다
-
-- 작업 데이터의 입력을 처리하는 코드를 addTask() 메서드로 분리한다.
-- main()과 addTask()에서 Task 클래스와 배열을 사용할 수 있도록 스태틱 멤버로 선언한다.
+- com.eomcs.util.ObjectFactory 인터페이스 생성
+  - create() 메서드를 규칙으로 정의한다.
 
 #### 작업 파일
+- com.eomcs.util.ObjectFactory 생성
 
-- com.eomcs.pms.App 클래스 변경
-  - 백업: App_e.java
+### 5단계 - 파일의 데이터를 로딩하는 메서드를 통합한다.
 
-### 6단계 - 작업 데이터 목록을 출력하는 코드를 메서드로 분리한다
-
-- 작업 데이터의 목록 출력을 처리하는 코드를 listTask() 메서드로 분리한다.
-
-#### 작업 파일
-
-- com.eomcs.pms.App 클래스 변경
-  - 백업: App_f.java
-
-### 7단계 - 사용자로부터 입력 받는 코드를 메서드로 분리한다
-
-- 키보드로부터 입력 받는 코드를 prompt() 메서드로 분리한다.
+- App 변경
+  - loadBoards(), loadMembers(), loadProjects(), loadTasks() 메서드를
+    loadObjects() 메서드로 통합한다.
 
 #### 작업 파일
+- com.eomcs.pms.App 변경
+  - 백업: App01.java
 
-- com.eomcs.pms.App 클래스 변경
-  - 백업: App_g.java
+### 6단계 - ObjectFactory 구현체로서 생성자를 사용한다.
 
-### 8단계 - prompt()를 목적에 따라 더 세분화하여 분리한다
-
-- 사용자로부터 입력 받는 기능에 프롬프트 제목을 바꿀 수 있도록 한다. 
-- 출력 값의 유형에 따라 여러 개의 메서드를 정의한다.
-  - prompt() 메서드를 promptString(), promptInt(), promptDate()으로 분리한다.
-- 사용자로부터 입력 받는 코드를 promptXxx() 메서드 호출로 대신한다.
+- Board, Member, Project, Task 변경
+  - CSV 문자열을 받아 인스턴스를 초기화시키는 생성자를 추가한다.
+- App 변경
+  - loadObjects()를 호출할 때 valueOfCsv() 대신에 도메인 클래스의 생성자를 전달한다.
 
 #### 작업 파일
+- com.eomcs.pms.App 변경
 
-- com.eomcs.pms.App 클래스 변경
 
 ## 실습 결과
-
+- src/main/java/com/eomcs/util/CsvObject.java 생성
+- src/main/java/com/eomcs/util/CsvObjectFactory.java 생성
+- src/main/java/com/eomcs/pms/domain/Board.java 변경
+- src/main/java/com/eomcs/pms/domain/Member.java 변경
+- src/main/java/com/eomcs/pms/domain/Project.java 변경
+- src/main/java/com/eomcs/pms/domain/Task.java 변경
 - src/main/java/com/eomcs/pms/App.java 변경
