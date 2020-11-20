@@ -1,22 +1,16 @@
 package com.eomcs.pms;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import com.eomcs.context.ApplicationContextListener;
 import com.eomcs.pms.domain.Board;
 import com.eomcs.pms.domain.Member;
 import com.eomcs.pms.domain.Project;
@@ -43,37 +37,71 @@ import com.eomcs.pms.handler.TaskDeleteCommand;
 import com.eomcs.pms.handler.TaskDetailCommand;
 import com.eomcs.pms.handler.TaskListCommand;
 import com.eomcs.pms.handler.TaskUpdateCommand;
-import com.eomcs.util.CsvObject;
+import com.eomcs.pms.listener.AppInitListener;
+import com.eomcs.pms.listener.DataHandlerListener;
 import com.eomcs.util.Prompt;
-import com.google.gson.Gson;
 
 public class App {
 
-  public static void main(String[] args) {
-    // 스태틱 멤버들이 공유하는 변수가 아니라면 로컬 변수로 만들라.
-    List<Board> boardList = new ArrayList<>();
-    File boardFile = new File("./board.json"); // 게시글을 저장할 파일 정보
+  // 옵저버와 공유할 맵 객체
+  Map<String,Object> context = new Hashtable<>();
 
-    List<Member> memberList = new LinkedList<>();
-    File memberFile = new File("./member.json"); // 회원을 저장할 파일 정보
+  // 옵저버를 보관할 컬렉션 객체
+  List<ApplicationContextListener> listeners = new ArrayList<>();
 
-    List<Project> projectList = new LinkedList<>();
-    File projectFile = new File("./project.json"); // 프로젝트를 저장할 파일 정보
+  // 옵저버를 등록하는 메서드
+  public void addApplicationContextListener(ApplicationContextListener listener) {
+    listeners.add(listener);
+  }
 
-    List<Task> taskList = new ArrayList<>();
-    File taskFile = new File("./task.json"); // 작업을 저장할 파일 정보
+  // 옵저버를 제거하는 메서드
+  public void removeApplicationContextListener(ApplicationContextListener listener) {
+    listeners.remove(listener);
+  }
 
-    // 파일에서 데이터 로딩
-    // => loadObjects(Collection<T>, File, ObjectFactory<T>)
-    // => 첫 번째 파라미터: ObjectFactory.create()가 만든 객체를 보관하는 컬렉션이다.
-    // => 두 번째 파라미터: CSV 문자열이 저장된 파일 정보이다.
-    // => 세 번재 파라미터: CSV 문자열을 객체로 만들어주는 create() 메서드를 가진 ObjectFactory 구현체이다.
-    // ObjectFactory의 구현체는 따로 만들지 말고 생성자를 전달한다.
-    //
-    loadObjects(boardList, boardFile, Board[].class);
-    loadObjects(memberList, memberFile, Member[].class);
-    loadObjects(projectList, projectFile, Project[].class);
-    loadObjects(taskList, taskFile, Task[].class);
+  // service() 실행 전에 옵저버에게 통지한다.
+  private void notifyApplicationContextListenerOnServiceStarted() {
+    for (ApplicationContextListener listener : listeners) {
+      // 곧 서비스를 시작할테니 준비하라고,
+      // 서비스 시작에 관심있는 각 옵저버에게 통지한다.
+      // => 옵저버에게 맵 객체를 넘겨준다.
+      // => 옵저버는 작업 결과를 파라미터로 넘겨준 맵 객체에 담아 줄 것이다.
+      listener.contextInitialized(context);
+    }
+  }
+
+  // service() 실행 후에 옵저버에게 통지한다.
+  private void notifyApplicationContextListenerOnServiceStopped() {
+    for (ApplicationContextListener listener : listeners) {
+      // 서비스가 종료되었으니 마무리 작업하라고,
+      // 마무리 작업에 관심있는 각 옵저버에게 통지한다.
+      // => 옵저버에게 맵 객체를 넘겨준다.
+      // => 옵저버는 작업 결과를 파라미터로 넘겨준 맵 객체에 담아 줄 것이다.
+      listener.contextDestroyed(context);
+    }
+  }
+
+
+  public static void main(String[] args) throws Exception {
+    App app = new App();
+
+    // 옵저버 등록
+    app.addApplicationContextListener(new AppInitListener());
+    app.addApplicationContextListener(new DataHandlerListener());
+
+    app.service();
+  }
+
+  @SuppressWarnings("unchecked")
+  public void service() throws Exception {
+
+    notifyApplicationContextListenerOnServiceStarted();
+
+    // 옵저버가 작업한 결과를 맵에서 꺼낸다.
+    List<Board> boardList = (List<Board>) context.get("boardList");
+    List<Member> memberList = (List<Member>) context.get("memberList");
+    List<Project> projectList = (List<Project>) context.get("projectList");
+    List<Task> taskList = (List<Task>) context.get("taskList");
 
     Map<String,Command> commandMap = new HashMap<>();
 
@@ -146,14 +174,10 @@ public class App {
 
     Prompt.close();
 
-    // 데이터를 파일에 저장
-    saveObjects(boardList, boardFile);
-    saveObjects(memberList, memberFile);
-    saveObjects(projectList, projectFile);
-    saveObjects(taskList, taskFile);
+    notifyApplicationContextListenerOnServiceStopped();
   }
 
-  static void printCommandHistory(Iterator<String> iterator) {
+  void printCommandHistory(Iterator<String> iterator) {
     try {
       int count = 0;
       while (iterator.hasNext()) {
@@ -169,86 +193,7 @@ public class App {
     }
   }
 
-  private static <T extends CsvObject> void saveObjects(Collection<T> list, File file) {
-    BufferedWriter out = null;
-
-    try {
-      out = new BufferedWriter(new FileWriter(file));
-
-      // JSON
-      Gson gson = new Gson();
-      String jsonStr = gson.toJson(list);
-      out.write(jsonStr);
-      out.flush();
-
-      System.out.printf("총 %d 개의 객체를 '%s' 파일에 저장했습니다.\n",
-          list.size(), file.getName());
-
-    } catch (IOException e) {
-      System.out.printf("객체를 '%s' 파일에  쓰는 중 오류 발생! - %s\n",
-          file.getName(), e.getMessage());
-
-    } finally {
-      try {
-        out.close();
-      } catch (IOException e) {
-      }
-    }
-  }
-
-  // 파일에서 CSV 문자열을 읽어  객체를 생성한 후 컬렉션에 저장한다.
-  private static <T> void loadObjects(
-      Collection<T> list, // 객체를 담을 컬렉션
-      File file, // JSON 문자열이 저장된 파일
-      Class<T[]> clazz // JSON 문자열이 어떤 타입의 배열인지 알려주는 클래스 정보
-      ) {
-    BufferedReader in = null;
-
-    try {
-      in = new BufferedReader(new FileReader(file));
-
-      StringBuilder strBuilder = new StringBuilder();
-
-      int b = 0;
-      while ((b = in.read()) != -1) {
-        strBuilder.append((char) b);
-      }
-
-      // JSON 문자열을 가지고 자바 객체를 생성한다.
-      //      Gson gson = new Gson();
-      //      T[] arr = gson.fromJson(strBuilder.toString(), clazz);
-      //      for (T obj : arr) {
-      //        list.add(obj);
-      //      }
-
-      // 2) 입력 스트림을 직접 Gson에게 전달하기.
-      //      Gson gson = new Gson();
-      //      T[] arr = gson.fromJson(in, clazz);
-      //      for (T obj : arr) {
-      //        list.add(obj);
-      //      }
-
-      // 3) 배열을 컬렉션에 바로 전달하기
-      //      Gson gson = new Gson();
-      //      T[] arr = gson.fromJson(in, clazz);
-      //      list.addAll(Arrays.asList(arr));
-
-      // 4) 코드 정리
-            list.addAll(Arrays.asList(new Gson().fromJson(in, clazz)));
 
 
-      System.out.printf("'%s' 파일에서 총 %d 개의 객체를 로딩했습니다.\n",
-          file.getName(), list.size());
 
-    } catch (Exception e) {
-      System.out.printf("'%s' 파일 읽기 중 오류 발생! - %s\n",
-          file.getName(), e.getMessage());
-
-    } finally {
-      try {
-        in.close();
-      } catch (Exception e) {
-      }
-    }
-  }
 }
